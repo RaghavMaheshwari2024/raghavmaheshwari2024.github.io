@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VigilAI — AML Investigation Orchestration & Copilot Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'navy':      '#0B132B',
+            'navy-mid':  '#1C2541',
+            'navy-card': '#162035',
+            'emerald':   '#10B981',
+            'emerald-dim':'#059669',
+            'cyan-acc':  '#22D3EE',
+            'slate-body':'#94A3B8',
+            'slate-dim': '#64748B',
+            'border-sub':'#1E3A5F',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background-color: #0B132B; color: #E2E8F0; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+
+    /* Scanline overlay on hero */
+    .scanlines::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+      pointer-events: none;
+    }
+
+    /* Glowing green dot */
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 0 0 rgba(16,185,129,0.7);
+      animation: pulse-ring 1.8s infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+      70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+
+    /* Ticker animation */
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .ticker-inner { display: flex; width: max-content; animation: ticker 28s linear infinite; }
+    .ticker-inner:hover { animation-play-state: paused; }
+
+    /* Graph node animation */
+    @keyframes node-pulse {
+      0%, 100% { opacity: 0.6; r: 6; }
+      50%       { opacity: 1;   r: 8; }
+    }
+    .graph-node { animation: node-pulse 2.5s ease-in-out infinite; }
+    .graph-node-2 { animation: node-pulse 2.5s ease-in-out 0.8s infinite; }
+    .graph-node-3 { animation: node-pulse 2.5s ease-in-out 1.6s infinite; }
+
+    /* Narrative typewriter cursor */
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .cursor { animation: blink 1s step-end infinite; }
+
+    /* Fade-in-up scroll reveal */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.65s ease, transform 0.65s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Glass card */
+    .glass { background: rgba(28,37,65,0.65); backdrop-filter: blur(12px); border: 1px solid rgba(30,58,95,0.7); }
+
+    /* Grid glow line */
+    .glow-line { height: 1px; background: linear-gradient(90deg, transparent, #10B981, transparent); }
+
+    /* Alert row hover */
+    .alert-row { transition: background 0.2s, border-color 0.2s; }
+    .alert-row:hover { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.4); }
+
+    /* CTA button */
+    .btn-primary {
+      background: linear-gradient(135deg, #10B981, #059669);
+      box-shadow: 0 0 24px rgba(16,185,129,0.35);
+      transition: box-shadow 0.25s, transform 0.2s;
+    }
+    .btn-primary:hover { box-shadow: 0 0 38px rgba(16,185,129,0.55); transform: translateY(-1px); }
+
+    /* Feature card */
+    .feat-card { transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s; }
+    .feat-card:hover { border-color: rgba(16,185,129,0.5); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+
+    /* Subtle background grid */
+    .bg-grid {
+      background-image: linear-gradient(rgba(30,58,95,0.25) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(30,58,95,0.25) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* Nav link */
+    .nav-link { position: relative; }
+    .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:1px; background:#10B981; transition: width 0.25s; }
+    .nav-link:hover::after { width:100%; }
+
+    /* Security badge */
+    .sec-badge { border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.07); }
+
+    /* Timeline connector */
+    .timeline-connector { border-left: 2px dashed rgba(30,58,95,0.8); }
+
+    /* Metric card glow */
+    .metric-glow { box-shadow: 0 0 30px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05); }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0B132B; }
+    ::-webkit-scrollbar-thumb { background: #1E3A5F; border-radius: 3px; }
+
+    /* Mock dashboard scrollable panel */
+    .mock-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #1E3A5F #0B132B; }
+  </style>
+</head>
+<body class="antialiased">
+
+<!-- ═══════════════════════════════════════════════════════════ NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md" style="background:rgba(11,19,43,0.82); border-bottom:1px solid rgba(30,58,95,0.6);">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:linear-gradient(135deg,#10B981,#059669);">
+        <svg viewBox="0 0 20 20" fill="none" class="w-4 h-4">
+          <path d="M10 2L3 6.5V13.5L10 18L17 13.5V6.5L10 2Z" stroke="white" stroke-width="1.5" fill="none"/>
+          <circle cx="10" cy="10" r="2.5" fill="white"/>
+        </svg>
+      </div>
+      <span class="font-sans font-bold text-white text-xl tracking-tight">VigilAI</span>
+      <span class="hidden sm:block text-xs font-mono tracking-wider px-2 py-0.5 rounded" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);">BETA</span>
+    </div>
+
+    <!-- Nav links -->
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#gap"      class="nav-link text-sm text-slate-body hover:text-white transition-colors">The Gap</a>
+      <a href="#platform" class="nav-link text-sm text-slate-body hover:text-white transition-colors">Platform</a>
+      <a href="#security" class="nav-link text-sm text-slate-body hover:text-white transition-colors">Security</a>
+      <a href="#contact"  class="nav-link text-sm text-slate-body hover:text-white transition-colors">Contact</a>
+    </div>
+
+    <a href="#contact" class="btn-primary text-white text-sm font-semibold px-5 py-2.5 rounded-lg">Request Pilot →</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════ TICKER -->
+<div class="fixed top-[65px] left-0 right-0 z-40 overflow-hidden py-2" style="background:rgba(16,185,129,0.08);border-bottom:1px solid rgba(16,185,129,0.2);">
+  <div class="ticker-inner text-xs font-mono tracking-wider text-emerald gap-12">
+    <!-- duplicated for seamless loop -->
+    <span class="mx-8">● PMLA 2002 — STR Filing Deadline: 7 Days from Suspicion</span>
+    <span class="mx-8">● FIU-IND FINnet 2.0 — Active Integration</span>
+    <span class="mx-8">● RBI Data Residency — In-Region Processing Only</span>
+    <span class="mx-8">● MuleHunter.ai Alert Volume: ↑ 340% YoY</span>
+    <span class="mx-8">● DPDP Act 2023 — PII Handling Compliant</span>
+    <span class="mx-8">● AWS PrivateLink — Zero Public Internet Exposure</span>
+    <span class="mx-8">● PMLA 2002 — STR Filing Deadline: 7 Days from Suspicion</span>
+    <span class="mx-8">● FIU-IND FINnet 2.0 — Active Integration</span>
+    <span class="mx-8">● RBI Data Residency — In-Region Processing Only</span>
+    <span class="mx-8">● MuleHunter.ai Alert Volume: ↑ 340% YoY</span>
+    <span class="mx-8">● DPDP Act 2023 — PII Handling Compliant</span>
+    <span class="mx-8">● AWS PrivateLink — Zero Public Internet Exposure</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ HERO -->
+<section class="relative min-h-screen flex flex-col justify-center pt-36 pb-20 bg-grid scanlines overflow-hidden" id="hero">
+  <!-- Radial glow -->
+  <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none" style="background:radial-gradient(ellipse, rgba(16,185,129,0.12) 0%, transparent 70%);"></div>
+
+  <div class="max-w-7xl mx-auto px-6 relative z-10">
+    <div class="max-w-4xl">
+      <!-- Eyebrow -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="pulse-dot"></div>
+        <span class="text-xs font-mono font-medium tracking-widest uppercase" style="color:#10B981;">Revolutionizing FinCrime Workflows</span>
+      </div>
+
+      <!-- Main headline -->
+      <h1 class="font-sans font-extrabold text-white tracking-tight leading-[1.08] mb-6" style="font-size:clamp(2.4rem,5.5vw,4.2rem);">
+        The Smart Workspace<br/>
+        <span style="background:linear-gradient(90deg,#10B981,#22D3EE);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">for Financial Crime</span><br/>
+        Investigations
+      </h1>
+
+      <!-- Subtitle -->
+      <p class="text-slate-body text-lg md:text-xl leading-relaxed mb-10 max-w-2xl">
+        Collapsing bank compliance backlogs from <span class="text-white font-semibold">45 minutes to under 2 minutes</span> with automated GSTN/MCA enrichment, graph-based mule-network detection, and FINnet 2.0&#8209;ready agentic narrative generation.
+      </p>
+
+      <!-- CTAs -->
+      <div class="flex flex-col sm:flex-row gap-4 items-start">
+        <a href="#contact" class="btn-primary text-white font-semibold px-8 py-4 rounded-xl text-base flex items-center gap-2">
+          Request Private Pilot
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </a>
+        <a href="#platform" class="text-slate-body hover:text-white text-base font-medium px-8 py-4 rounded-xl transition-colors" style="border:1px solid rgba(30,58,95,0.8);">See the Platform ↓</a>
+      </div>
+
+      <!-- Trust chips -->
+      <div class="flex flex-wrap gap-3 mt-10">
+        <span class="sec-badge text-xs font-mono tracking-wider px-3 py-1.5 rounded-full text-slate-body">🏦 Commercial Banks</span>
+        <span class="sec-badge text-xs font-mono tracking-wider px-3 py-1.5 rounded-full text-slate-body">🏦 Small Finance Banks</span>
+        <span class="sec-badge text-xs font-mono tracking-wider px-3 py-1.5 rounded-full text-slate-body">📱 Payments Banks</span>
+        <span class="sec-badge text-xs font-mono tracking-wider px-3 py-1.5 rounded-full text-slate-body">🔒 AWS PrivateLink Deployable</span>
+        <span class="sec-badge text-xs font-mono tracking-wider px-3 py-1.5 rounded-full text-slate-body">📋 FIU-IND FINnet 2.0</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ METRICS STRIP -->
+<section class="py-10 border-y" style="border-color:rgba(30,58,95,0.6);background:#0F1A35;">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-0 md:divide-x" style="--tw-divide-opacity:1;border-color:rgba(30,58,95,0.5)">
+      <div class="text-center md:px-10">
+        <div class="font-sans font-extrabold text-4xl" style="color:#10B981;">96%</div>
+        <div class="text-slate-body text-sm mt-1">Reduction in avg. validation time per alert</div>
+      </div>
+      <div class="text-center md:px-10 md:border-l" style="border-color:rgba(30,58,95,0.5)">
+        <div class="font-sans font-extrabold text-4xl text-white">&lt;90s</div>
+        <div class="text-slate-body text-sm mt-1">Async enrichment from GSTN + MCA + CBS</div>
+      </div>
+      <div class="text-center md:px-10 md:border-l" style="border-color:rgba(30,58,95,0.5)">
+        <div class="font-sans font-extrabold text-4xl" style="color:#22D3EE;">FINnet</div>
+        <div class="text-slate-body text-sm mt-1">STR narratives pre-formatted for FIU-IND 2.0</div>
+      </div>
+      <div class="text-center md:px-10 md:border-l" style="border-color:rgba(30,58,95,0.5)">
+        <div class="font-sans font-extrabold text-4xl text-white">0 bytes</div>
+        <div class="text-slate-body text-sm mt-1">Customer data traversing public internet</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ MOCK DASHBOARD UI -->
+<section class="py-24 relative overflow-hidden" id="platform">
+  <div class="absolute inset-0 bg-grid opacity-40"></div>
+  <div class="max-w-7xl mx-auto px-6 relative z-10">
+
+    <div class="text-center mb-14 reveal">
+      <p class="text-xs font-mono tracking-widest uppercase mb-3" style="color:#10B981;">Live Platform Preview</p>
+      <h2 class="font-sans font-extrabold text-white tracking-tight text-3xl md:text-4xl mb-4">One Workspace. Every Context. Zero Tab-Switching.</h2>
+      <p class="text-slate-body max-w-2xl mx-auto">The VigilAI analyst console surfaces entity enrichment, network topology, and a pre-drafted STR narrative in a single unified pane — from the moment an alert fires.</p>
+    </div>
+
+    <!-- Dashboard shell -->
+    <div class="rounded-2xl overflow-hidden reveal" style="border:1px solid rgba(30,58,95,0.8);box-shadow:0 40px 100px rgba(0,0,0,0.6);">
+
+      <!-- Window chrome -->
+      <div class="flex items-center gap-2 px-5 py-3.5" style="background:#0D1829;border-bottom:1px solid rgba(30,58,95,0.6);">
+        <span class="w-3 h-3 rounded-full" style="background:#FF5F57;"></span>
+        <span class="w-3 h-3 rounded-full" style="background:#FFBD2E;"></span>
+        <span class="w-3 h-3 rounded-full" style="background:#28C840;"></span>
+        <span class="ml-4 text-xs font-mono tracking-wider text-slate-dim">VigilAI Console — Investigation Mode — Analyst: priya.sharma@sbi.co.in</span>
+        <div class="ml-auto flex items-center gap-2">
+          <div class="pulse-dot"></div>
+          <span class="text-xs font-mono tracking-wider" style="color:#10B981;">LIVE</span>
+        </div>
+      </div>
+
+      <!-- 3-column dashboard layout -->
+      <div class="grid grid-cols-12" style="background:#0B1628;min-height:520px;">
+
+        <!-- LEFT: Alert sidebar -->
+        <div class="col-span-12 md:col-span-3 mock-scroll" style="border-right:1px solid rgba(30,58,95,0.6);max-height:520px;">
+          <div class="p-4 border-b" style="border-color:rgba(30,58,95,0.6);">
+            <p class="text-xs font-mono uppercase tracking-widest text-slate-dim mb-1">Triggered Alerts</p>
+            <div class="flex items-center gap-2">
+              <span class="text-white font-semibold text-lg">14</span>
+              <span class="text-xs px-2 py-0.5 rounded-full font-mono tracking-wider" style="background:rgba(239,68,68,0.15);color:#F87171;border:1px solid rgba(239,68,68,0.3);">6 CRITICAL</span>
+            </div>
+          </div>
+
+          <div class="p-3 space-y-2">
+            <!-- Alert 1 — ACTIVE -->
+            <div class="alert-row p-3 rounded-lg cursor-pointer" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.4);">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">● ACTIVE</span>
+                <span class="text-xs text-slate-dim font-mono tracking-wider">09:42</span>
+              </div>
+              <p class="text-white text-sm font-semibold">Velocity Anomaly</p>
+              <p class="text-slate-dim text-xs mt-0.5">A/C ···4821 — 38 txns / 4h</p>
+              <div class="flex gap-1 mt-2">
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(239,68,68,0.15);color:#F87171;">HIGH RISK</span>
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(30,58,95,0.5);color:#94A3B8;">UPI</span>
+              </div>
+            </div>
+
+            <!-- Alert 2 -->
+            <div class="alert-row p-3 rounded-lg cursor-pointer" style="border:1px solid rgba(30,58,95,0.5);">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-mono tracking-wider text-slate-dim">● QUEUED</span>
+                <span class="text-xs text-slate-dim font-mono tracking-wider">08:17</span>
+              </div>
+              <p class="text-white text-sm font-semibold">Sub-Threshold Structuring</p>
+              <p class="text-slate-dim text-xs mt-0.5">A/C ···0093 — ₹49,800 × 9</p>
+              <div class="flex gap-1 mt-2">
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(245,158,11,0.15);color:#FCD34D;">MEDIUM</span>
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(30,58,95,0.5);color:#94A3B8;">NEFT</span>
+              </div>
+            </div>
+
+            <!-- Alert 3 -->
+            <div class="alert-row p-3 rounded-lg cursor-pointer" style="border:1px solid rgba(30,58,95,0.5);">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-mono tracking-wider text-slate-dim">● QUEUED</span>
+                <span class="text-xs text-slate-dim font-mono tracking-wider">07:55</span>
+              </div>
+              <p class="text-white text-sm font-semibold">Circular Fund Routing</p>
+              <p class="text-slate-dim text-xs mt-0.5">5-node mule cluster detected</p>
+              <div class="flex gap-1 mt-2">
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(239,68,68,0.15);color:#F87171;">CRITICAL</span>
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(30,58,95,0.5);color:#94A3B8;">IMPS</span>
+              </div>
+            </div>
+
+            <!-- Alert 4 -->
+            <div class="alert-row p-3 rounded-lg cursor-pointer" style="border:1px solid rgba(30,58,95,0.5);">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-mono tracking-wider text-slate-dim">● QUEUED</span>
+                <span class="text-xs text-slate-dim font-mono tracking-wider">07:31</span>
+              </div>
+              <p class="text-white text-sm font-semibold">Dormant A/C Reactivation</p>
+              <p class="text-slate-dim text-xs mt-0.5">A/C ···7734 — 18mo inactivity</p>
+              <div class="flex gap-1 mt-2">
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(245,158,11,0.15);color:#FCD34D;">MEDIUM</span>
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(30,58,95,0.5);color:#94A3B8;">CASA</span>
+              </div>
+            </div>
+
+            <!-- Alert 5 -->
+            <div class="alert-row p-3 rounded-lg cursor-pointer" style="border:1px solid rgba(30,58,95,0.5);">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-mono tracking-wider text-slate-dim">● QUEUED</span>
+                <span class="text-xs text-slate-dim font-mono tracking-wider">06:59</span>
+              </div>
+              <p class="text-white text-sm font-semibold">PEP Counterparty Match</p>
+              <p class="text-slate-dim text-xs mt-0.5">A/C ···2219 — OFAC proximity 2</p>
+              <div class="flex gap-1 mt-2">
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(239,68,68,0.15);color:#F87171;">CRITICAL</span>
+                <span class="text-xs px-1.5 py-0.5 rounded font-mono tracking-wider" style="background:rgba(30,58,95,0.5);color:#94A3B8;">WIRE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Graph panel -->
+        <div class="col-span-12 md:col-span-5" style="border-right:1px solid rgba(30,58,95,0.6);">
+          <!-- Tab bar -->
+          <div class="flex" style="border-bottom:1px solid rgba(30,58,95,0.6);">
+            <button class="px-5 py-3 text-xs font-mono tracking-wider font-medium border-b-2" style="color:#10B981;border-color:#10B981;">Network Graph</button>
+            <button class="px-5 py-3 text-xs font-mono tracking-wider text-slate-dim hover:text-white transition-colors">Ledger (90d)</button>
+            <button class="px-5 py-3 text-xs font-mono tracking-wider text-slate-dim hover:text-white transition-colors">KYC Dossier</button>
+            <button class="px-5 py-3 text-xs font-mono tracking-wider text-slate-dim hover:text-white transition-colors">GSTN / MCA</button>
+          </div>
+
+          <!-- Graph area -->
+          <div class="p-4 relative">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-xs font-mono tracking-wider text-slate-dim">Entity: <span class="text-white">RAJESH KUMAR GUPTA</span> · A/C ···4821</p>
+              <div class="flex gap-2">
+                <span class="text-xs px-2 py-0.5 rounded font-mono tracking-wider" style="background:rgba(239,68,68,0.15);color:#F87171;">5 linked nodes</span>
+                <span class="text-xs px-2 py-0.5 rounded font-mono tracking-wider" style="background:rgba(30,58,95,0.5);color:#94A3B8;">Circular path detected</span>
+              </div>
+            </div>
+
+            <!-- SVG Network Graph -->
+            <div class="rounded-xl overflow-hidden" style="background:#070F1F;border:1px solid rgba(30,58,95,0.5);">
+              <svg viewBox="0 0 480 280" xmlns="http://www.w3.org/2000/svg" class="w-full">
+                <!-- Background grid -->
+                <defs>
+                  <pattern id="g" width="24" height="24" patternUnits="userSpaceOnUse">
+                    <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(30,58,95,0.3)" stroke-width="0.5"/>
+                  </pattern>
+                  <radialGradient id="glow-green" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#10B981" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="glow-red" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#EF4444" stop-opacity="0"/>
+                  </radialGradient>
+                  <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L6,3 z" fill="#10B981" opacity="0.7"/>
+                  </marker>
+                  <marker id="arrow-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L6,3 z" fill="#F87171" opacity="0.7"/>
+                  </marker>
+                </defs>
+                <rect width="480" height="280" fill="url(#g)"/>
+
+                <!-- Glow halos -->
+                <circle cx="240" cy="130" r="60" fill="url(#glow-green)" opacity="0.5"/>
+                <circle cx="130" cy="70" r="35" fill="url(#glow-red)" opacity="0.4"/>
+
+                <!-- Edges — circular path highlighted -->
+                <!-- Main suspect → Node B -->
+                <line x1="240" y1="130" x2="130" y2="70" stroke="#10B981" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6" marker-end="url(#arrow)"/>
+                <!-- Node B → Node C -->
+                <line x1="130" y1="70" x2="80" y2="160" stroke="#10B981" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6" marker-end="url(#arrow)"/>
+                <!-- Node C → Node D -->
+                <line x1="80" y1="160" x2="180" y2="220" stroke="#F87171" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6" marker-end="url(#arrow-red)"/>
+                <!-- Node D → Main (circular!) -->
+                <line x1="180" y1="220" x2="240" y2="130" stroke="#F87171" stroke-width="2" opacity="0.8" marker-end="url(#arrow-red)"/>
+                <!-- Main → Node E -->
+                <line x1="240" y1="130" x2="370" y2="80" stroke="#10B981" stroke-width="1" stroke-dasharray="4 3" opacity="0.4" marker-end="url(#arrow)"/>
+                <!-- Main → Node F -->
+                <line x1="240" y1="130" x2="400" y2="190" stroke="#10B981" stroke-width="1" stroke-dasharray="4 3" opacity="0.4" marker-end="url(#arrow)"/>
+
+                <!-- Nodes -->
+                <!-- Central suspect -->
+                <circle cx="240" cy="130" r="18" fill="#0D1829" stroke="#10B981" stroke-width="2"/>
+                <circle cx="240" cy="130" r="8" fill="#10B981" class="graph-node"/>
+                <text x="240" y="158" text-anchor="middle" fill="#E2E8F0" font-size="8" font-family="JetBrains Mono">A/C ···4821</text>
+                <text x="240" y="168" text-anchor="middle" fill="#94A3B8" font-size="7" font-family="JetBrains Mono">R.K. GUPTA</text>
+
+                <!-- Node B — mule -->
+                <circle cx="130" cy="70" r="14" fill="#0D1829" stroke="#F87171" stroke-width="2"/>
+                <circle cx="130" cy="70" r="6" fill="#F87171" class="graph-node-2"/>
+                <text x="130" y="90" text-anchor="middle" fill="#E2E8F0" font-size="7" font-family="JetBrains Mono">A/C ···0093</text>
+                <text x="130" y="99" text-anchor="middle" fill="#94A3B8" font-size="6.5" font-family="JetBrains Mono">SHELL ENTITY</text>
+
+                <!-- Node C -->
+                <circle cx="80" cy="160" r="12" fill="#0D1829" stroke="#F87171" stroke-width="1.5"/>
+                <circle cx="80" cy="160" r="5" fill="#F87171" opacity="0.8" class="graph-node-3"/>
+                <text x="80" y="178" text-anchor="middle" fill="#94A3B8" font-size="7" font-family="JetBrains Mono">A/C ···7201</text>
+
+                <!-- Node D -->
+                <circle cx="180" cy="220" r="12" fill="#0D1829" stroke="#F87171" stroke-width="2"/>
+                <circle cx="180" cy="220" r="5" fill="#F87171" class="graph-node"/>
+                <text x="180" y="238" text-anchor="middle" fill="#94A3B8" font-size="7" font-family="JetBrains Mono">A/C ···3348</text>
+
+                <!-- Node E (benign-looking) -->
+                <circle cx="370" cy="80" r="10" fill="#0D1829" stroke="#64748B" stroke-width="1"/>
+                <circle cx="370" cy="80" r="4" fill="#64748B"/>
+                <text x="370" y="97" text-anchor="middle" fill="#64748B" font-size="7" font-family="JetBrains Mono">A/C ···9912</text>
+
+                <!-- Node F -->
+                <circle cx="400" cy="190" r="10" fill="#0D1829" stroke="#64748B" stroke-width="1"/>
+                <circle cx="400" cy="190" r="4" fill="#64748B"/>
+                <text x="400" y="207" text-anchor="middle" fill="#64748B" font-size="7" font-family="JetBrains Mono">A/C ···1105</text>
+
+                <!-- Circular path label -->
+                <rect x="280" y="168" width="118" height="18" rx="4" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.4)" stroke-width="1"/>
+                <text x="289" y="180" fill="#F87171" font-size="8" font-family="JetBrains Mono">⚠ Circular route: 4 hops</text>
+
+                <!-- Legend -->
+                <circle cx="16" cy="260" r="4" fill="#10B981"/>
+                <text x="24" y="264" fill="#94A3B8" font-size="7" font-family="JetBrains Mono">Subject</text>
+                <circle cx="70" cy="260" r="4" fill="#F87171"/>
+                <text x="78" y="264" fill="#94A3B8" font-size="7" font-family="JetBrains Mono">Flagged node</text>
+                <circle cx="138" cy="260" r="4" fill="#64748B"/>
+                <text x="146" y="264" fill="#94A3B8" font-size="7" font-family="JetBrains Mono">Neutral</text>
+              </svg>
+            </div>
+
+            <!-- Enrichment status bar -->
+            <div class="mt-3 grid grid-cols-3 gap-2">
+              <div class="rounded-lg p-2.5 text-center" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);">
+                <p class="text-xs font-mono tracking-wider" style="color:#10B981;">✓ GSTN</p>
+                <p class="text-white text-xs font-semibold mt-0.5">Verified</p>
+                <p class="text-slate-dim text-xs">GST filing gap: 3 qtrs</p>
+              </div>
+              <div class="rounded-lg p-2.5 text-center" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);">
+                <p class="text-xs font-mono tracking-wider" style="color:#10B981;">✓ MCA21</p>
+                <p class="text-white text-xs font-semibold mt-0.5">2 directorships</p>
+                <p class="text-slate-dim text-xs">1 struck off entity</p>
+              </div>
+              <div class="rounded-lg p-2.5 text-center" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
+                <p class="text-xs font-mono tracking-wider" style="color:#FCD34D;">⟳ CBS</p>
+                <p class="text-white text-xs font-semibold mt-0.5">Loading 90d</p>
+                <p class="text-slate-dim text-xs">38% complete</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: AI Narrative -->
+        <div class="col-span-12 md:col-span-4 mock-scroll" style="max-height:520px;">
+          <div class="p-4 border-b" style="border-color:rgba(30,58,95,0.6);">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-mono uppercase tracking-widest text-slate-dim">Agentic STR Draft</p>
+              <span class="text-xs px-2 py-0.5 rounded font-mono tracking-wider" style="background:rgba(16,185,129,0.12);color:#10B981;border:1px solid rgba(16,185,129,0.3);">FINnet 2.0 Compatible</span>
+            </div>
+          </div>
+
+          <div class="p-4 space-y-4">
+            <!-- AI generation indicator -->
+            <div class="flex items-center gap-2 p-3 rounded-lg" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);">
+              <div class="w-1.5 h-1.5 rounded-full" style="background:#10B981;"></div>
+              <span class="text-xs font-mono tracking-wider" style="color:#10B981;">In-region LLM generating narrative…</span>
+              <span class="cursor text-emerald ml-auto">▋</span>
+            </div>
+
+            <!-- Field blocks -->
+            <div class="space-y-3">
+              <div class="rounded-lg p-3" style="background:#0A1220;border:1px solid rgba(30,58,95,0.6);">
+                <p class="text-xs font-mono text-slate-dim uppercase tracking-wider mb-1.5">STR Reference</p>
+                <p class="text-white font-mono text-sm">STR/2024-25/VIG/004821</p>
+              </div>
+
+              <div class="rounded-lg p-3" style="background:#0A1220;border:1px solid rgba(30,58,95,0.6);">
+                <p class="text-xs font-mono text-slate-dim uppercase tracking-wider mb-1.5">Reporting Entity</p>
+                <p class="text-white text-sm">State Bank of India, Mid-Corporate Branch, Mumbai — IFSC: SBIN0001234</p>
+              </div>
+
+              <div class="rounded-lg p-3" style="background:#0A1220;border:1px solid rgba(30,58,95,0.6);">
+                <p class="text-xs font-mono text-slate-dim uppercase tracking-wider mb-2">Investigation Summary</p>
+                <p class="text-slate-body text-xs leading-relaxed">
+                  The account holder, <span class="text-white">Rajesh Kumar Gupta</span> (A/C ···4821), exhibits velocity anomalies consistent with <span class="text-yellow-400">mule-account layering</span> under PMLA Schedule offence categories. 38 transactions totalling <span class="text-white">₹18,74,200</span> were processed over a 4-hour window on 14-Jun-2024, representing a <span class="text-red-400">1,840% deviation</span> from the 90-day peer-group baseline.
+                </p>
+                <p class="text-slate-body text-xs leading-relaxed mt-2">
+                  Graph-theoretic analysis reveals a <span class="text-red-400">4-hop circular routing pattern</span> across five accounts (···4821 → ···0093 → ···7201 → ···3348 → ···4821). MCA21 records confirm one co-director entity (DIN: 07312948) was struck off under Section 248 of Companies Act 2013. GSTN filings are in arrears for 3 quarters.
+                </p>
+              </div>
+
+              <div class="rounded-lg p-3" style="background:#0A1220;border:1px solid rgba(30,58,95,0.6);">
+                <p class="text-xs font-mono text-slate-dim uppercase tracking-wider mb-1.5">Recommended Action</p>
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full" style="background:#EF4444;"></div>
+                  <p class="text-white text-sm font-semibold">File STR with FIU-IND — within 7 days (PMLA §12)</p>
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="flex gap-2 pt-1">
+                <button class="flex-1 btn-primary text-white text-xs font-semibold py-2.5 rounded-lg">Submit to FINnet 2.0</button>
+                <button class="flex-1 text-slate-body text-xs font-semibold py-2.5 rounded-lg transition-colors hover:text-white" style="border:1px solid rgba(30,58,95,0.7);">Edit Narrative</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="text-center text-xs font-mono tracking-wider text-slate-dim mt-5 opacity-70">Simulated analyst console. Entity names and account numbers are illustrative. In production, all data remains within your bank's AWS VPC.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ THE GAP SECTION -->
+<section class="py-24 relative" id="gap">
+  <div class="max-w-7xl mx-auto px-6">
+
+    <div class="text-center mb-14 reveal">
+      <p class="text-xs font-mono tracking-widest uppercase mb-3" style="color:#10B981;">The Market Gap</p>
+      <h2 class="font-sans font-extrabold text-white tracking-tight text-3xl md:text-4xl mb-4">India's AML Stack Has a Broken Handoff</h2>
+      <p class="text-slate-body max-w-2xl mx-auto">Detection engines fire alerts at machine speed. What happens next is entirely human, entirely manual, and operationally broken.</p>
+    </div>
+
+    <div class="glow-line mb-10 opacity-60"></div>
+
+    <div class="grid md:grid-cols-2 gap-6 reveal">
+
+      <!-- LEFT: The Trigger Engine -->
+      <div class="rounded-2xl p-8" style="background:#0F1A35;border:1px solid rgba(30,58,95,0.7);">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.3);">
+            <svg class="w-5 h-5" style="color:#22D3EE;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div>
+            <p class="text-xs font-mono uppercase tracking-widest text-slate-dim">Speed 1</p>
+            <h3 class="text-white font-sans font-bold text-xl tracking-tight">The Trigger Engine</h3>
+          </div>
+        </div>
+
+        <div class="space-y-4 mb-6">
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs" style="background:rgba(34,211,238,0.15);color:#22D3EE;">✓</span>
+            <div>
+              <p class="text-white text-sm font-semibold">MuleHunter.ai & TMS Rules Fire in Milliseconds</p>
+              <p class="text-slate-body text-xs mt-0.5">RBIH's AI detection engine and internal transaction monitoring system (TMS) identify anomalous patterns — velocity spikes, sub-threshold structuring, PEP proximity — and generate alerts in near real-time.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs" style="background:rgba(34,211,238,0.15);color:#22D3EE;">✓</span>
+            <div>
+              <p class="text-white text-sm font-semibold">Automated Alert Queue Population</p>
+              <p class="text-slate-body text-xs mt-0.5">Alerts are scored, prioritised, and routed to the Financial Crime Investigation Unit (FCIU) queue within seconds. The machine's job ends here.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs" style="background:rgba(34,211,238,0.15);color:#22D3EE;">✓</span>
+            <div>
+              <p class="text-white text-sm font-semibold">High and Rising Alert Volumes</p>
+              <p class="text-slate-body text-xs mt-0.5">With UPI transaction volumes exceeding 14 billion/month, alert queues at commercial banks often contain 200–800 open items at any given time, with Payments Banks experiencing the sharpest growth.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl p-4" style="background:#070F1F;border:1px solid rgba(34,211,238,0.2);">
+          <p class="text-xs font-mono tracking-wider text-slate-dim mb-2">System latency from transaction to alert:</p>
+          <div class="flex items-end gap-2">
+            <span class="font-sans font-extrabold text-3xl" style="color:#22D3EE;">&lt; 2s</span>
+            <span class="text-slate-dim text-sm mb-1">end-to-end detection</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: The Validation Bottleneck -->
+      <div class="rounded-2xl p-8 relative overflow-hidden" style="background:#1A0F0F;border:1px solid rgba(239,68,68,0.3);">
+        <div class="absolute inset-0 opacity-10" style="background:repeating-linear-gradient(-45deg, rgba(239,68,68,0.1), rgba(239,68,68,0.1) 1px, transparent 1px, transparent 8px);"></div>
+        <div class="relative z-10">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);">
+              <svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-mono uppercase tracking-widest" style="color:#F87171;">Speed 2 — Broken</p>
+              <h3 class="text-white font-sans font-bold text-xl tracking-tight">The Validation Bottleneck</h3>
+            </div>
+          </div>
+
+          <div class="space-y-4 mb-6">
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs text-red-400" style="background:rgba(239,68,68,0.12);">✗</span>
+              <div>
+                <p class="text-white text-sm font-semibold">Manual GST Portal Lookup (7–12 min)</p>
+                <p class="text-slate-body text-xs mt-0.5">Analyst opens GSTN portal in a separate tab, searches by PAN/GSTIN, manually screenshots and copy-pastes filing history and turnover data into a local case notes file.</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs text-red-400" style="background:rgba(239,68,68,0.12);">✗</span>
+              <div>
+                <p class="text-white text-sm font-semibold">Manual MCA21 Director Lookup (5–8 min)</p>
+                <p class="text-slate-body text-xs mt-0.5">Separate login to MCA21 v3 to pull DIN records, company charge sheets, and cross-directorships. No API — strictly UI-driven. Results are copy-pasted into investigation notes.</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs text-red-400" style="background:rgba(239,68,68,0.12);">✗</span>
+              <div>
+                <p class="text-white text-sm font-semibold">CBS Ledger Pull Request (10–15 min queue)</p>
+                <p class="text-slate-body text-xs mt-0.5">Analyst submits a report request to the CBS team for 90-day ledger history. This often sits in a shared mailbox queue with SLAs measured in hours, not seconds.</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs text-red-400" style="background:rgba(239,68,68,0.12);">✗</span>
+              <div>
+                <p class="text-white text-sm font-semibold">STR Narrative Typed from Scratch (15–20 min)</p>
+                <p class="text-slate-body text-xs mt-0.5">With all data finally assembled across 6+ tabs, the analyst manually drafts a PMLA-compliant investigation narrative and reformats it for FINnet 2.0 XML upload. High error rate, low consistency.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl p-4" style="background:#0A0505;border:1px solid rgba(239,68,68,0.25);">
+            <p class="text-xs font-mono tracking-wider text-slate-dim mb-2">Avg. analyst time per alert validation:</p>
+            <div class="flex items-end gap-2">
+              <span class="font-sans font-extrabold text-3xl text-red-400">45 min</span>
+              <span class="text-slate-dim text-sm mb-1">of fragmented manual effort</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Arrow bridge -->
+    <div class="flex justify-center mt-10 reveal">
+      <div class="text-center">
+        <div class="w-px h-10 mx-auto" style="background:linear-gradient(#EF4444,#10B981);"></div>
+        <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full mt-2" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);">
+          <span class="font-sans font-bold text-white">VigilAI collapses this gap to</span>
+          <span class="font-sans font-extrabold text-2xl" style="color:#10B981;">&lt; 2 minutes</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ FEATURE GRID -->
+<section class="py-24 relative" style="background:#0D1829;">
+  <div class="absolute inset-0 bg-grid opacity-30"></div>
+  <div class="max-w-7xl mx-auto px-6 relative z-10">
+
+    <div class="text-center mb-14 reveal">
+      <p class="text-xs font-mono tracking-widest uppercase mb-3" style="color:#10B981;">Core Capabilities</p>
+      <h2 class="font-sans font-extrabold text-white tracking-tight text-3xl md:text-4xl mb-4">Three Engines. One Investigation Workspace.</h2>
+      <p class="text-slate-body max-w-2xl mx-auto">Each capability is architected to address a specific layer of the investigation workflow — enrichment, analysis, and filing — so your analysts never leave the platform.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 reveal">
+
+      <!-- Feature 1 -->
+      <div class="feat-card rounded-2xl p-7" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.3);">
+          <svg class="w-6 h-6" style="color:#10B981;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zM9 12h6M12 9v6"/></svg>
+        </div>
+        <div class="text-xs font-mono uppercase tracking-widest mb-2" style="color:#10B981;">Module 01</div>
+        <h3 class="font-sans font-bold text-white text-xl tracking-tight mb-3">Asynchronous Context Enrichment</h3>
+        <p class="text-slate-body text-sm leading-relaxed mb-5">The moment an alert is opened, VigilAI dispatches parallel API calls to GSTN, MCA21 v3, and your Core Banking System simultaneously. Results converge into a single enriched entity dossier in under 90 seconds — no context switching, no waiting, no copy-pasting.</p>
+
+        <div class="space-y-2.5 pt-4" style="border-top:1px solid rgba(30,58,95,0.6);">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">GSTN Filing Status</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#10B981;">Live API</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">MCA21 v3 Director Graph</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#10B981;">Live API</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">CBS 90-Day Ledger</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#10B981;">Core Banking Connector</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">KYC / CKYC Repository</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#10B981;">Configurable</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feat-card rounded-2xl p-7" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,rgba(34,211,238,0.2),rgba(34,211,238,0.05));border:1px solid rgba(34,211,238,0.3);">
+          <svg class="w-6 h-6" style="color:#22D3EE;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+        </div>
+        <div class="text-xs font-mono uppercase tracking-widest mb-2" style="color:#22D3EE;">Module 02</div>
+        <h3 class="font-sans font-bold text-white text-xl tracking-tight mb-3">Relational Linkage Graphing</h3>
+        <p class="text-slate-body text-sm leading-relaxed mb-5">Money-mule networks are graph problems. VigilAI builds a directed transaction graph per entity — surfacing circular fund routing, fan-out layering, and shared-identifier clusters (mobile, device ID, nominee DIN) that are invisible in tabular ledger views.</p>
+
+        <div class="space-y-2.5 pt-4" style="border-top:1px solid rgba(30,58,95,0.6);">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">Circular path detection</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#22D3EE;">Graph traversal</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">Fan-out / fan-in analysis</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#22D3EE;">Centrality scoring</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">Community clustering</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#22D3EE;">Louvain algorithm</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">Interactive node expansion</span>
+            <span class="text-xs font-mono tracking-wider" style="color:#22D3EE;">Analyst-driven</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feat-card rounded-2xl p-7" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(168,85,247,0.05));border:1px solid rgba(168,85,247,0.3);">
+          <svg class="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <div class="text-xs font-mono uppercase tracking-widest mb-2 text-purple-400">Module 03</div>
+        <h3 class="font-sans font-bold text-white text-xl tracking-tight mb-3">Agentic STR Narrative Generation</h3>
+        <p class="text-slate-body text-sm leading-relaxed mb-5">A sovereign, in-region LLM synthesises enrichment outputs and graph findings into a structured investigation narrative mapped to PMLA Schedule offences and FATF typologies. Output is pre-formatted for direct upload to FIU-IND's FINnet 2.0 portal — analyst reviews, edits, and submits.</p>
+
+        <div class="space-y-2.5 pt-4" style="border-top:1px solid rgba(30,58,95,0.6);">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">PMLA Schedule mapping</span>
+            <span class="text-xs font-mono tracking-wider text-purple-400">Automated</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">FINnet 2.0 XML schema</span>
+            <span class="text-xs font-mono tracking-wider text-purple-400">Pre-formatted</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">In-region LLM inference</span>
+            <span class="text-xs font-mono tracking-wider text-purple-400">No data egress</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-dim font-mono tracking-wider">Analyst edit + approval</span>
+            <span class="text-xs font-mono tracking-wider text-purple-400">Human-in-loop</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ HOW IT WORKS -->
+<section class="py-24" style="background:#0B132B;">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16 reveal">
+      <p class="text-xs font-mono tracking-widest uppercase mb-3" style="color:#10B981;">Workflow</p>
+      <h2 class="font-sans font-extrabold text-white tracking-tight text-3xl md:text-4xl">From Alert to Filed STR in Under 2 Minutes</h2>
+    </div>
+
+    <div class="relative reveal">
+      <!-- Connector line (desktop) -->
+      <div class="hidden md:block absolute top-8 left-[calc(12.5%+1.5rem)] right-[calc(12.5%+1.5rem)] h-0.5 z-0" style="background:linear-gradient(90deg,#10B981,#22D3EE,#A855F7);opacity:0.4;"></div>
+
+      <div class="grid md:grid-cols-4 gap-6 relative z-10">
+        <!-- Step 1 -->
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 relative" style="background:#0F1A35;border:2px solid #10B981;">
+            <span class="font-sans font-extrabold text-xl" style="color:#10B981;">01</span>
+          </div>
+          <h4 class="text-white font-semibold mb-2">Alert Fires</h4>
+          <p class="text-slate-body text-sm">MuleHunter.ai or TMS generates a risk alert. VigilAI receives the event via secure webhook within your VPC.</p>
+        </div>
+        <!-- Step 2 -->
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 relative" style="background:#0F1A35;border:2px solid #22D3EE;">
+            <span class="font-sans font-extrabold text-xl" style="color:#22D3EE;">02</span>
+          </div>
+          <h4 class="text-white font-semibold mb-2">Context Assembled</h4>
+          <p class="text-slate-body text-sm">Parallel async jobs pull GSTN status, MCA21 directorships, and 90-day CBS ledger. Enriched dossier ready in &lt;90s.</p>
+        </div>
+        <!-- Step 3 -->
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 relative" style="background:#0F1A35;border:2px solid #A855F7;">
+            <span class="font-sans font-extrabold text-xl text-purple-400">03</span>
+          </div>
+          <h4 class="text-white font-semibold mb-2">Graph Rendered</h4>
+          <p class="text-slate-body text-sm">Transaction network visualised. Circular routes, mule clusters, and shared identifiers flagged automatically for analyst review.</p>
+        </div>
+        <!-- Step 4 -->
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 relative" style="background:#0F1A35;border:2px solid #10B981;">
+            <span class="font-sans font-extrabold text-xl" style="color:#10B981;">04</span>
+          </div>
+          <h4 class="text-white font-semibold mb-2">STR Filed</h4>
+          <p class="text-slate-body text-sm">Agentic LLM pre-drafts the PMLA narrative. Analyst approves and submits directly to FIU-IND FINnet 2.0 portal.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ SECURITY SECTION -->
+<section class="py-24 relative" id="security" style="background:#080F1E;">
+  <div class="absolute inset-0 bg-grid opacity-20"></div>
+  <div class="max-w-7xl mx-auto px-6 relative z-10">
+
+    <!-- Section header -->
+    <div class="text-center mb-14 reveal">
+      <p class="text-xs font-mono tracking-widest uppercase mb-3" style="color:#10B981;">Core Architecture &amp; Security</p>
+      <h2 class="font-sans font-extrabold text-white tracking-tight text-3xl md:text-4xl mb-4">Designed for RBI Data Residency Requirements.<br class="hidden md:block"/> Not as an Afterthought.</h2>
+      <p class="text-slate-body max-w-2xl mx-auto">VigilAI deploys entirely within your bank's existing AWS environment — every compute, inference, and graph workload runs inside a private network boundary in <span class="text-white font-medium">AWS Asia Pacific (Mumbai) ap-south-1</span>. Customer financial data never traverses a public network, never touches a shared cloud tenant, and never leaves Indian soil.</p>
+    </div>
+
+    <!-- ── THREE PRIMARY AWS SERVICE HIGHLIGHT CARDS ── -->
+    <div class="grid md:grid-cols-3 gap-5 mb-12 reveal">
+
+      <!-- Card 1: Amazon Bedrock + Bedrock Agents -->
+      <div class="rounded-2xl p-6 relative overflow-hidden feat-card" style="background:#0A1020;border:2px solid rgba(168,85,247,0.45);">
+        <!-- Glow wash -->
+        <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(ellipse at top left, rgba(168,85,247,0.1) 0%, transparent 65%);"></div>
+        <div class="relative z-10">
+          <!-- AWS service label pill -->
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4" style="background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);">
+            <!-- Bedrock icon (simplified hexagon) -->
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="#A855F7" stroke-width="1.2" fill="rgba(168,85,247,0.2)"/><circle cx="8" cy="8" r="2" fill="#A855F7"/></svg>
+            <span class="text-xs font-mono tracking-wider font-medium" style="color:#C084FC;">Amazon Bedrock &amp; Bedrock Agents</span>
+          </div>
+          <h3 class="font-sans font-bold text-white tracking-tight text-lg mb-2">Sovereign GenAI Execution</h3>
+          <p class="text-slate-body text-sm leading-relaxed mb-5">All LLM inference and agentic STR-drafting pipelines run exclusively via <span class="text-white font-semibold">Amazon Bedrock</span> in the <span class="text-purple-300 font-semibold">ap-south-1 (Mumbai) Region</span>. Bedrock Agents orchestrate the enrichment-to-narrative workflow with full tool-use calling — no external model endpoint is ever contacted. Maintains 100% compliance with RBI's domestic data localisation mandate.</p>
+          <!-- Spec rail -->
+          <div class="space-y-2 pt-4" style="border-top:1px solid rgba(168,85,247,0.2);">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Inference region</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#C084FC;">ap-south-1 only</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Agentic orchestration</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#C084FC;">Bedrock Agents</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">External model calls</span>
+              <span class="text-xs font-mono tracking-wider font-medium text-red-400">None — zero egress</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">RBI data localisation</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">✓ Satisfied</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Amazon Neptune -->
+      <div class="rounded-2xl p-6 relative overflow-hidden feat-card" style="background:#0A1020;border:2px solid rgba(34,211,238,0.45);">
+        <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(ellipse at top left, rgba(34,211,238,0.08) 0%, transparent 65%);"></div>
+        <div class="relative z-10">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.4);">
+            <!-- Neptune icon (graph/node simplified) -->
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="2" fill="#22D3EE"/><circle cx="13" cy="3" r="2" fill="#22D3EE"/><circle cx="13" cy="13" r="2" fill="#22D3EE"/><line x1="5" y1="7" x2="11" y2="4" stroke="#22D3EE" stroke-width="1.2"/><line x1="5" y1="9" x2="11" y2="12" stroke="#22D3EE" stroke-width="1.2"/></svg>
+            <span class="text-xs font-mono tracking-wider font-medium" style="color:#22D3EE;">Amazon Neptune</span>
+          </div>
+          <h3 class="font-sans font-bold text-white tracking-tight text-lg mb-2">High-Performance Linkage Analytics</h3>
+          <p class="text-slate-body text-sm leading-relaxed mb-5">Real-time node-and-edge relationship maps — tracing multi-layered shell companies, circular fund routes, and shared-identity clusters — are powered by a fully managed <span class="text-white font-semibold">Amazon Neptune</span> graph database instance. Neptune's SPARQL and openCypher engines enable sub-second traversal across millions of entity relationships without ETL overhead.</p>
+          <div class="space-y-2 pt-4" style="border-top:1px solid rgba(34,211,238,0.2);">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Database engine</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#22D3EE;">Amazon Neptune</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Query languages</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#22D3EE;">openCypher · SPARQL</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Traversal latency</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">&lt; 200ms typical</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Deployment mode</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#22D3EE;">Fully managed / HA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Amazon VPC + AWS PrivateLink -->
+      <div class="rounded-2xl p-6 relative overflow-hidden feat-card" style="background:#0A1020;border:2px solid rgba(16,185,129,0.45);">
+        <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(ellipse at top left, rgba(16,185,129,0.09) 0%, transparent 65%);"></div>
+        <div class="relative z-10">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.4);">
+            <!-- VPC/shield icon -->
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4v4c0 3.3 2.5 6.1 6 6.9C12 14.1 14 11.3 14 8V4L8 1.5Z" stroke="#10B981" stroke-width="1.2" fill="rgba(16,185,129,0.15)"/><path d="M5.5 8l2 2 3-3" stroke="#10B981" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">Amazon VPC &amp; AWS PrivateLink</span>
+          </div>
+          <h3 class="font-sans font-bold text-white tracking-tight text-lg mb-2">Perimeter Isolation</h3>
+          <p class="text-slate-body text-sm leading-relaxed mb-5">The entire Copilot orchestration layer — every enrichment call to CBS, GSTN, and MCA21, every graph query to Neptune, every inference request to Bedrock — communicates exclusively through <span class="text-white font-semibold">AWS PrivateLink</span> endpoints inside the bank's <span class="text-white font-semibold">Amazon VPC</span>. No request ever traverses the public internet. No VPN tunnel required.</p>
+          <div class="space-y-2 pt-4" style="border-top:1px solid rgba(16,185,129,0.2);">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Network boundary</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">Amazon VPC</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Service connectivity</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">AWS PrivateLink</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">Public internet traversal</span>
+              <span class="text-xs font-mono tracking-wider font-medium text-red-400">None — 0 bytes</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono tracking-wider text-slate-dim">VPN dependency</span>
+              <span class="text-xs font-mono tracking-wider font-medium" style="color:#10B981;">Not required</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /three AWS cards -->
+
+    <!-- ── ARCHITECTURE DIAGRAM + COMPLIANCE BADGES ── -->
+    <div class="grid md:grid-cols-2 gap-8 reveal">
+
+      <!-- LEFT: Named-service architecture diagram -->
+      <div class="rounded-2xl p-7" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="text-white font-sans font-bold text-lg tracking-tight">AWS Service Map</h3>
+          <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-full" style="background:rgba(255,153,0,0.1);color:#FB923C;border:1px solid rgba(255,153,0,0.3);">ap-south-1 · Mumbai</span>
+        </div>
+
+        <!-- Outer VPC dashed border -->
+        <div class="rounded-xl p-4 mb-4" style="background:#05090F;border:2px dashed rgba(16,185,129,0.3);">
+          <p class="text-xs font-mono tracking-widest uppercase mb-4 flex items-center gap-2" style="color:#10B981;">
+            <svg class="w-3 h-3" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="2" stroke="#10B981" stroke-width="1.2" stroke-dasharray="2 1"/></svg>
+            Amazon VPC — Bank Private Subnet
+          </p>
+
+          <!-- Top row: Bedrock + App Layer -->
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="rounded-lg p-3" style="background:#0D0A1E;border:1px solid rgba(168,85,247,0.4);">
+              <p class="text-xs font-mono tracking-wider font-medium mb-0.5" style="color:#C084FC;">Amazon Bedrock</p>
+              <p class="text-slate-dim text-xs">Agents · Model inference</p>
+              <p class="text-xs font-mono tracking-wider mt-1" style="color:#10B981;">ap-south-1 ✓</p>
+            </div>
+            <div class="rounded-lg p-3" style="background:#091528;border:1px solid rgba(30,58,95,0.7);">
+              <p class="text-xs font-mono tracking-wider font-medium mb-0.5" style="color:#22D3EE;">VigilAI App Layer</p>
+              <p class="text-slate-dim text-xs">ECS Fargate · Private subnet</p>
+              <p class="text-xs font-mono tracking-wider mt-1" style="color:#10B981;">Isolated compute ✓</p>
+            </div>
+          </div>
+
+          <!-- Middle row: Neptune + RDS/S3 -->
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="rounded-lg p-3" style="background:#051520;border:1px solid rgba(34,211,238,0.4);">
+              <p class="text-xs font-mono tracking-wider font-medium mb-0.5" style="color:#22D3EE;">Amazon Neptune</p>
+              <p class="text-slate-dim text-xs">Graph DB · Multi-AZ HA</p>
+              <p class="text-xs font-mono tracking-wider mt-1" style="color:#10B981;">openCypher · SPARQL ✓</p>
+            </div>
+            <div class="rounded-lg p-3" style="background:#091528;border:1px solid rgba(30,58,95,0.7);">
+              <p class="text-xs font-mono tracking-wider font-medium mb-0.5" style="color:#22D3EE;">Amazon RDS + S3</p>
+              <p class="text-slate-dim text-xs">Case store · AES-256 · KMS</p>
+              <p class="text-xs font-mono tracking-wider mt-1" style="color:#10B981;">Encrypted at rest ✓</p>
+            </div>
+          </div>
+
+          <!-- Bottom row: PrivateLink endpoints -->
+          <div class="rounded-lg p-3 mb-2" style="background:#020812;border:1px solid rgba(16,185,129,0.3);">
+            <p class="text-xs font-mono tracking-wider font-medium mb-2" style="color:#10B981;">AWS PrivateLink Endpoints</p>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="text-center">
+                <p class="text-xs font-mono tracking-wider text-slate-dim">Core Banking</p>
+                <p class="text-xs" style="color:#10B981;">↕ VPC Endpoint</p>
+              </div>
+              <div class="text-center">
+                <p class="text-xs font-mono tracking-wider text-slate-dim">GSTN API</p>
+                <p class="text-xs" style="color:#10B981;">↕ VPC Endpoint</p>
+              </div>
+              <div class="text-center">
+                <p class="text-xs font-mono tracking-wider text-slate-dim">MCA21 API</p>
+                <p class="text-xs" style="color:#10B981;">↕ VPC Endpoint</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observability strip -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="rounded-lg p-2.5" style="background:#091528;border:1px solid rgba(30,58,95,0.5);">
+              <p class="text-xs font-mono tracking-wider text-slate-dim">AWS CloudTrail</p>
+              <p class="text-xs text-slate-body">Immutable audit log · 5yr retention</p>
+            </div>
+            <div class="rounded-lg p-2.5" style="background:#091528;border:1px solid rgba(30,58,95,0.5);">
+              <p class="text-xs font-mono tracking-wider text-slate-dim">AWS KMS</p>
+              <p class="text-xs text-slate-body">Customer-managed keys · CMK</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zero-internet callout -->
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);">
+          <svg class="w-4 h-4 flex-shrink-0" style="color:#10B981;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <p class="text-xs text-slate-body">Every service-to-service call flows through <span class="text-white font-semibold">AWS PrivateLink</span>. Zero public internet traversal. Traffic stays on the AWS private backbone end-to-end.</p>
+        </div>
+      </div>
+
+      <!-- RIGHT: Compliance badges -->
+      <div class="space-y-4">
+
+        <div class="feat-card rounded-xl p-5" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);">
+              <svg class="w-5 h-5" style="color:#10B981;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold mb-1">RBI Data Residency — Fully Satisfied</h4>
+              <p class="text-slate-body text-sm">All inference, graph traversal, and storage workloads execute within <span class="text-white">AWS ap-south-1 (Mumbai)</span>. Satisfies the RBI's 2018 Payment System Data Storage circular and subsequent localisation guidance, with Amazon Bedrock enforcing in-region model execution at the infrastructure layer.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-card rounded-xl p-5" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.3);">
+              <svg class="w-5 h-5" style="color:#22D3EE;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold mb-1">DPDP Act 2023 — PII Isolation by Design</h4>
+              <p class="text-slate-body text-sm">Customer PII is processed inside dedicated ECS Fargate task environments scoped per investigation, with <span class="text-white">AWS KMS customer-managed keys</span> for field-level encryption. No cross-tenant data leakage. Audit logs retained 5 years via CloudTrail + S3 Object Lock — PMLA Section 12 compliant.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-card rounded-xl p-5" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.3);">
+              <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm0 0v.093A4 4 0 0115.93 14H17a2 2 0 012 2v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1a2 2 0 012-2h1.07A4 4 0 019 12.093V12"/></svg>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold mb-1">No Third-Party Model Calls — Ever</h4>
+              <p class="text-slate-body text-sm">STR narrative generation and enrichment reasoning are handled exclusively by <span class="text-white">Amazon Bedrock</span> foundation models with cross-region inference disabled. Investigation data never contacts OpenAI, Anthropic's API, Google Vertex, or any off-AWS endpoint — enforced at the VPC network policy layer.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-card rounded-xl p-5" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);">
+              <svg class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold mb-1">Immutable Audit Trail via AWS CloudTrail + S3</h4>
+              <p class="text-slate-body text-sm">Every analyst action, Bedrock inference call, Neptune graph query, and enrichment event is written to <span class="text-white">AWS CloudTrail</span> with S3 Object Lock (WORM) enabled. Tamper-proof investigation records for FIU-IND examinations and internal audit — 5-year retention by default.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /grid -->
+
+    <!-- ── AWS ACTIVATE BANNER ── -->
+    <div class="mt-10 reveal">
+      <div class="rounded-2xl p-7" style="background:rgba(255,153,0,0.04);border:2px solid rgba(255,153,0,0.25);">
+        <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <!-- AWS logo mark -->
+          <div class="flex-shrink-0">
+            <div class="w-16 h-16 rounded-xl flex items-center justify-center" style="background:rgba(255,153,0,0.1);border:1px solid rgba(255,153,0,0.3);">
+              <!-- AWS smile arrow -->
+              <svg viewBox="0 0 40 24" class="w-10" fill="none">
+                <text x="0" y="17" font-family="Arial Black, sans-serif" font-weight="900" font-size="14" fill="#FF9900">AWS</text>
+                <path d="M8 21 Q20 26 32 21" stroke="#FF9900" stroke-width="2" stroke-linecap="round" fill="none"/>
+                <path d="M29 19 L32 21 L30 23.5" stroke="#FF9900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </div>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-3 mb-2">
+              <p class="text-white font-sans font-bold tracking-tight text-lg">AWS Activate Portfolio — Deep Native Integration</p>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-full" style="background:rgba(255,153,0,0.12);color:#FB923C;border:1px solid rgba(255,153,0,0.35);">Credit-Eligible Architecture</span>
+            </div>
+            <p class="text-slate-body text-sm leading-relaxed mb-4">VigilAI's infrastructure is built entirely on AWS-native managed services — no third-party databases, no off-cloud model endpoints, no hybrid licensing complexity. Every workload is metered directly through the AWS billing console, making credit application and burn-down reporting straightforward for the review board.</p>
+            <!-- AWS service chips -->
+            <div class="flex flex-wrap gap-2">
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(168,85,247,0.4);color:#C084FC;">Amazon Bedrock</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(168,85,247,0.4);color:#C084FC;">Bedrock Agents</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(34,211,238,0.4);color:#22D3EE;">Amazon Neptune</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(16,185,129,0.4);color:#10B981;">Amazon VPC</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(16,185,129,0.4);color:#10B981;">AWS PrivateLink</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(255,153,0,0.35);color:#FB923C;">ECS Fargate</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(255,153,0,0.35);color:#FB923C;">Amazon RDS</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(255,153,0,0.35);color:#FB923C;">AWS KMS</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(255,153,0,0.35);color:#FB923C;">AWS CloudTrail</span>
+              <span class="text-xs font-mono tracking-wider px-2.5 py-1 rounded-md" style="background:#0D1829;border:1px solid rgba(255,153,0,0.35);color:#FB923C;">Amazon S3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ CONTACT CTA -->
+<section class="py-24 relative overflow-hidden" id="contact">
+  <div class="absolute inset-0" style="background:radial-gradient(ellipse at center, rgba(16,185,129,0.1) 0%, transparent 65%);"></div>
+  <div class="max-w-3xl mx-auto px-6 text-center relative z-10 reveal">
+    <div class="flex justify-center mb-6">
+      <span class="text-xs font-mono tracking-wider px-4 py-1.5 rounded-full" style="background:rgba(16,185,129,0.12);color:#10B981;border:1px solid rgba(16,185,129,0.3);">Limited Private Pilot — Q3 2025</span>
+    </div>
+    <h2 class="font-sans font-extrabold text-white tracking-tight text-3xl md:text-5xl leading-tight mb-6">
+      Your analysts deserve better than 14 browser tabs.
+    </h2>
+    <p class="text-slate-body text-lg mb-10">
+      We're onboarding a select cohort of Indian banks for our private pilot programme. If you're a CISO, CCO, or Head of Financial Crime Operations at a commercial, small finance, or payments bank — let's talk.
+    </p>
+
+    <!-- Contact form -->
+    <div class="rounded-2xl p-8 text-left" style="background:#0F1A35;border:1px solid rgba(30,58,95,0.7);">
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-widest text-slate-dim mb-2">Full Name</label>
+          <input type="text" placeholder="Priya Sharma" class="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-dim focus:outline-none focus:ring-2 transition-all" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);focus:ring-color:#10B981;"/>
+        </div>
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-widest text-slate-dim mb-2">Work Email</label>
+          <input type="email" placeholder="priya@bankname.co.in" class="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-dim focus:outline-none focus:ring-2 transition-all" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);"/>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-widest text-slate-dim mb-2">Bank Name</label>
+          <input type="text" placeholder="e.g. Axis Bank, Jana SFB" class="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-dim focus:outline-none focus:ring-2 transition-all" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);"/>
+        </div>
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-widest text-slate-dim mb-2">Role</label>
+          <input type="text" placeholder="e.g. Chief Compliance Officer" class="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-dim focus:outline-none focus:ring-2 transition-all" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);"/>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-xs font-mono uppercase tracking-widest text-slate-dim mb-2">What's your biggest AML validation pain point?</label>
+        <textarea rows="3" placeholder="e.g. Alert queue aging, STR filing delays, analyst burnout…" class="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-dim focus:outline-none focus:ring-2 transition-all resize-none" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);"></textarea>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center gap-4">
+        <button class="btn-primary w-full sm:w-auto text-white font-semibold px-10 py-4 rounded-xl text-base flex items-center justify-center gap-2">
+          Request Private Pilot
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </button>
+        <p class="text-slate-dim text-xs text-center sm:text-left">Or email us directly at <a href="mailto:solutions@vigilai.ai" class="transition-colors hover:text-white" style="color:#10B981;">solutions@vigilai.ai</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ FOOTER -->
+<footer style="background:#05080F;border-top:1px solid rgba(30,58,95,0.5);">
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <div class="grid md:grid-cols-4 gap-10 mb-10">
+
+      <!-- Brand col -->
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:linear-gradient(135deg,#10B981,#059669);">
+            <svg viewBox="0 0 20 20" fill="none" class="w-4 h-4">
+              <path d="M10 2L3 6.5V13.5L10 18L17 13.5V6.5L10 2Z" stroke="white" stroke-width="1.5" fill="none"/>
+              <circle cx="10" cy="10" r="2.5" fill="white"/>
+            </svg>
+          </div>
+          <span class="font-sans font-bold text-white text-xl tracking-tight">VigilAI</span>
+        </div>
+        <p class="text-slate-body text-sm leading-relaxed max-w-sm mb-4">
+          AML Investigation Orchestration and Copilot Platform for Indian banks. Built for the post-MuleHunter.ai era of financial crime compliance.
+        </p>
+        <p class="text-slate-dim text-xs font-mono tracking-wider">Registered in India · CIN: U74999MH2024PTC000000</p>
+        <a href="mailto:solutions@vigilai.ai" class="inline-flex items-center gap-2 mt-3 text-sm transition-colors hover:text-white" style="color:#10B981;">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          solutions@vigilai.ai
+        </a>
+      </div>
+
+      <!-- Platform col -->
+      <div>
+        <h5 class="text-white font-semibold text-sm mb-4">Platform</h5>
+        <ul class="space-y-2.5">
+          <li><a href="#platform" class="text-slate-body text-sm hover:text-white transition-colors">Context Enrichment</a></li>
+          <li><a href="#platform" class="text-slate-body text-sm hover:text-white transition-colors">Linkage Graphing</a></li>
+          <li><a href="#platform" class="text-slate-body text-sm hover:text-white transition-colors">STR Narrative Generation</a></li>
+          <li><a href="#security" class="text-slate-body text-sm hover:text-white transition-colors">Security Architecture</a></li>
+          <li><a href="#security" class="text-slate-body text-sm hover:text-white transition-colors">AWS PrivateLink Deployment</a></li>
+        </ul>
+      </div>
+
+      <!-- Compliance col -->
+      <div>
+        <h5 class="text-white font-semibold text-sm mb-4">Compliance</h5>
+        <ul class="space-y-2.5">
+          <li><a href="#" class="text-slate-body text-sm hover:text-white transition-colors">PMLA 2002 Alignment</a></li>
+          <li><a href="#" class="text-slate-body text-sm hover:text-white transition-colors">FIU-IND FINnet 2.0</a></li>
+          <li><a href="#" class="text-slate-body text-sm hover:text-white transition-colors">RBI KYC Master Direction</a></li>
+          <li><a href="#" class="text-slate-body text-sm hover:text-white transition-colors">DPDP Act 2023</a></li>
+          <li><a href="#" class="text-slate-body text-sm hover:text-white transition-colors">FATF Typology Coverage</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="glow-line opacity-40 mb-8"></div>
+
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-dim text-xs">© 2025 VigilAI Technologies Private Limited. All rights reserved. VigilAI is not affiliated with RBI, FIU-IND, or RBIH.</p>
+      <div class="flex items-center gap-6">
+        <a href="#" class="text-slate-dim text-xs hover:text-white transition-colors">Terms of Service</a>
+        <a href="#" class="text-slate-dim text-xs hover:text-white transition-colors">Privacy Policy</a>
+        <a href="#" class="text-slate-dim text-xs hover:text-white transition-colors">Responsible Disclosure</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════ SCRIPTS -->
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(el => observer.observe(el));
+
+  // Input focus styles
+  document.querySelectorAll('input, textarea').forEach(el => {
+    el.addEventListener('focus', () => { el.style.borderColor = 'rgba(16,185,129,0.6)'; el.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.15)'; });
+    el.addEventListener('blur',  () => { el.style.borderColor = 'rgba(30,58,95,0.7)'; el.style.boxShadow = 'none'; });
+  });
+
+  // Mobile nav scroll highlight (optional future enhancement)
+  // Simple form submission placeholder
+  document.querySelectorAll('button').forEach(btn => {
+    if (btn.textContent.trim().startsWith('Request Private Pilot')) {
+      btn.addEventListener('click', () => {
+        btn.textContent = 'Request Sent ✓';
+        btn.style.background = 'linear-gradient(135deg,#059669,#047857)';
+        setTimeout(() => { btn.innerHTML = 'Request Private Pilot <svg class="w-4 h-4 inline ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>'; btn.style.background = ''; }, 3000);
+      });
+    }
+  });
+</script>
+
+</body>
+</html>
