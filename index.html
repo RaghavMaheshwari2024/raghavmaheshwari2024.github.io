@@ -209,10 +209,11 @@
 
       <!-- CTAs -->
       <div class="flex flex-col sm:flex-row gap-4 items-start">
-        <a href="#contact" class="btn-primary text-white font-semibold px-8 py-4 rounded-xl text-base flex items-center gap-2">
-          Request Private Demo
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
+        <a href="https://demo.vigilnet.tech"
+   target="_blank"
+   rel="noopener noreferrer"
+   class="btn-primary text-white font-semibold px-8 py-4 rounded-xl text-base flex items-center gap-2">
+    Request Private Demo
         <a href="#platform" class="text-slate-body hover:text-white text-base font-medium px-8 py-4 rounded-xl transition-colors" style="border:1px solid rgba(30,58,95,0.8);">See the Platform ↓</a>
       </div>
 
@@ -1179,12 +1180,13 @@
         <textarea rows="3" placeholder="e.g. Alert queue aging, STR filing delays, analyst burnout…" class="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-dim focus:outline-none focus:ring-2 transition-all resize-none" style="background:#0B1628;border:1px solid rgba(30,58,95,0.7);"></textarea>
       </div>
       <div class="flex flex-col items-center justify-center w-full">
-      <button class="btn-primary w-full sm:w-auto text-white font-semibold px-10 py-4 rounded-xl text-base flex items-center justify-center gap-2">
-        Request Private Pilot
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-          </svg>
-      </button>
+      <a href="https://demo.vigilnet.tech"
+   target="_blank"
+   rel="noopener noreferrer"
+   class="btn-primary w-full sm:w-auto text-white font-semibold px-10 py-4 rounded-xl text-base flex items-center justify-center gap-2">
+    Request Private Demo
+    <svg ...></svg>
+</a>
       </div>
     </div>
   </div>
@@ -1277,15 +1279,6 @@
 
   // Mobile nav scroll highlight (optional future enhancement)
   // Simple form submission placeholder
-  document.querySelectorAll('button').forEach(btn => {
-    if (btn.textContent.trim().startsWith('Request Private Pilot')) {
-      btn.addEventListener('click', () => {
-        btn.textContent = 'Request Sent ✓';
-        btn.style.background = 'linear-gradient(135deg,#059669,#047857)';
-        setTimeout(() => { btn.innerHTML = 'Request Private Pilot <svg class="w-4 h-4 inline ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>'; btn.style.background = ''; }, 3000);
-      });
-    }
-  });
 </script>
 
 </body>
